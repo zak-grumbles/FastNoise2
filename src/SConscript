@@ -17,29 +17,18 @@ fastsimd_internal_headers += fastsimd_internal_inl
 
 fastsimd_headers = fastsimd_headers + fastsimd_inl + fastsimd_include_inl
 
-if env['fastsimd_compile_have_neon'] == True:
-    fastsimd_sources = {
-        'FastSIMD/FastSIMD.cpp': '',
-        'FastSIMD/FastSIMD_Level_NEON.cpp': '',
-        'FastSIMD/FastSIMD_Level_Scalar.cpp': ''
-    }
-elif env['fastsimd_compile_arm']:
-    fastsimd_sources = {
-        'FastSIMD/FastSIMD.cpp': '',
-        'FastSIMD/FastSIMD_Level_Scalar.cpp': ''
-    }
-else:
-    fastsimd_sources = {
-        'FastSIMD/FastSIMD.cpp': '',
-        'FastSIMD/FastSIMD_Level_AVX2.cpp': '',
-        'FastSIMD/FastSIMD_Level_AVX512.cpp': '',
-        'FastSIMD/FastSIMD_Level_Scalar.cpp': '',
-        'FastSIMD/FastSIMD_Level_SSE2.cpp': '',
-        'FastSIMD/FastSIMD_Level_SSE3.cpp': '',
-        'FastSIMD/FastSIMD_Level_SSE41.cpp': '',
-        'FastSIMD/FastSIMD_Level_SSE42.cpp': '',
-        'FastSIMD/FastSIMD_Level_SSSE3.cpp': ''
-    }
+
+from fastsimd_helpers import *
+fastsimd_obj = []
+if env['CXX'] == 'cl':
+    env.AppendUnique(CPPFLAGS=['/GL-', '/GS-', '/fp:fast', '/wd4251'])
+    fastsimd_obj = get_sources_cl_msvc(env)
+elif env['CXX'] in ['clang++','gcc','g++']:
+    if env['msvc']:
+        env.AppendUnique(CPPFLAGS=['/GL-','/GS-','/fp:fast'])
+    else:
+        env.AppendUnique(CPPFLAGS=['-ffast-math','-fno-stack-protector'])
+
 
 # FastNoise files
 fastnoise_headers = glob.glob('*.h', root_dir='../include/FastNoise/')
@@ -49,58 +38,10 @@ fastnoise_generators_inl = glob.glob('*.inl', root_dir='../include/FastNoise/Gen
 
 fastnoise_headers = fastnoise_headers + fastnoise_inl
 fastnoise_generators_headers += fastnoise_generators_inl
-fastnoise_sources = {
-    'FastNoise/Metadata.cpp': '',
-    'FastNoise/SmartNode.cpp': '',
-    'FastNoise/FastNoise_C.cpp': ''
-}
+fastnoise_obj = [
+    env.Object('FastNoise/Metadata.cpp'),
+    env.Object('FastNoise/SmartNode.cpp'),
+    env.Object('FastNoise/FastNoise_C.cpp'),
+]
 
-if env['msvc']:
-    env.AppendUnique(CXXFLAGS=['/GL-', '/GS-', '/fp:fast', '/wd4251'])
-    
-    if not env['fastsimd_compile_arm']:
-        if env['sizeof_void_p'] == 4:
-            fastsimd_sources['FastSIMD/FastSIMD_Level_Scalar.cpp'] = '/arch:SSE'
-            fastsimd_sources['FastSIMD/FastSIMD_Level_SSE2.cpp'] = '/arch:SSE2'
-            fastsimd_sources['FastSIMD/FastSIMD_Level_SSE3.cpp'] = '/arch:SSE2'
-            fastsimd_sources['FastSIMD/FastSIMD_Level_SSSE3.cpp'] = '/arch:SSE2'
-            fastsimd_sources['FastSIMD/FastSIMD_Level_SSE41.cpp'] = '/arch:SSE2'
-            fastsimd_sources['FastSIMD/FastSIMD_Level_SSE42.cpp'] = '/arch:SSE2'
-        fastsimd_sources['FastSIMD/FastSIMD_Level_AVX2.cpp'] = '/arch:AVX2'
-        fastsimd_sources['FastSIMD/FastSIMD_Level_AVX512.cpp'] = '/arch:AVX512'
-    elif env['fastsimd_compile_armv7']:
-        fastsimd_sources['FastSIMD/FastSIMD_Level_NEON.cpp'] = '/arch:NEON'
-
-elif env['CXX'] == 'clang++' or env['CXX'] == 'gcc':
-    if env['msvc']:
-        env.AppendUnique(CXXFLAGS=['/GL-', '/GS-', '/fp:fast'])
-    else:
-        env.AppendUnique(CXXFLAGS=['-ffast-math', '-fno-stack-protector'])
-
-    if not env['fastsimd_compile_arm']:
-        if env['sizeof_void_p'] == 4 or '-m32' in env['CXXFLAGS']:
-            fastsimd_sources['FastSIMD/FastSIMD_Level_Scalar.cpp'] = '-msse'
-            fastsimd_sources['FastSIMD/FastSIMD_Level_SSE32.cpp'] = '-msse32'
-        fastsimd_sources['FastSIMD/FastSIMD_Level_SSE3.cpp'] = "-msse3"
-        fastsimd_sources['FastSIMD/FastSIMD_Level_SSSE3.cpp'] = "-mssse3"
-        fastsimd_sources['FastSIMD/FastSIMD_Level_SSE41.cpp'] = "-msse4.1"
-        fastsimd_sources['FastSIMD/FastSIMD_Level_SSE42.cpp'] = "-msse4.2"
-        fastsimd_sources['FastSIMD/FastSIMD_Level_AVX2.cpp'] = "-mavx2 -mfma"
-        fastsimd_sources['FastSIMD/FastSIMD_Level_AVX512.cpp'] = "-mavx512f -mavx512dq -mfma"
-
-    elif env['fastsimd_compile_armv7']:
-        fastsimd_sources['FastSIMD/FastSIMD_Level_NEON.cpp'] = '-march=armv7-a -mfpu=neon'
-
-# buidl obj file
-lib_objs = []
-
-for file in fastsimd_sources:
-    lib_objs.append(env.Object(file, CXXFLAGS=fastsimd_sources[file]))
-
-for file in fastnoise_sources:
-    lib_objs.append(env.Object(file, CXXFLAGS=fastnoise_sources[file]))
-
-if env['build_shared_libs'] is True:
-    env.SharedLibrary('FastNoise', lib_objs)
-else:
-    env.Library('FastNoise', lib_objs)
+Library('FastNoise', fastsimd_obj + fastnoise_obj)
