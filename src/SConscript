@@ -20,15 +20,13 @@ fastsimd_headers = fastsimd_headers + fastsimd_inl + fastsimd_include_inl
 
 from fastsimd_helpers import *
 fastsimd_obj = []
-if env['CXX'] == 'cl':
-    env.AppendUnique(CPPFLAGS=['/GL-', '/GS-', '/fp:fast', '/wd4251'])
-    fastsimd_obj = get_sources_cl_msvc(env)
-elif env['CXX'] in ['clang++','gcc','g++']:
-    if env['msvc']:
-        env.AppendUnique(CPPFLAGS=['/GL-','/GS-','/fp:fast'])
-    else:
-        env.AppendUnique(CPPFLAGS=['-ffast-math','-fno-stack-protector'])
 
+if env['use_llvm']:
+    env.AppendUnique(CPPFLAGS=['-std=c++17','-ffast-math','-fno-stack-protector'])
+    fastsimd_obj = get_sources_non_msvc(env)
+elif env['CC'] == 'cl':
+    env.AppendUnique(CPPFLAGS=['/std:c++17','/GL-', '/GS-', '/fp:fast', '/wd4251'])
+    fastsimd_obj = get_sources_cl_msvc(env)
 
 # FastNoise files
 fastnoise_headers = glob.glob('*.h', root_dir='../include/FastNoise/')

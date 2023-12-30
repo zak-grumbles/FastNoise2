@@ -128,7 +128,7 @@ def __get_msse_sources(env_base: "Environment", sources):
 
     msse_sources = [
         'FastSIMD/FastSIMD_Level_SSE3.cpp',
-        'FastSIMD/FastSIMD_Level_SSSE3.cpp'
+        'FastSIMD/FastSIMD_Level_SSSE3.cpp',
         'FastSIMD/FastSIMD_Level_SSE41.cpp',
         'FastSIMD/FastSIMD_Level_SSE42.cpp',
     ]
@@ -146,6 +146,8 @@ def __get_msse_sources(env_base: "Environment", sources):
 
 
 def __get_avx_sources_non_msvc(env_base: "Environment", sources):
+    objs = []
+
     env_avx2 = env_base.Clone()
     env_avx2.AppendUnique(CPPFLAGS=['-mavx2','-mfma'])
     avx2_file = 'FastSIMD/FastSIMD_Level_AVX2.cpp'
@@ -177,8 +179,8 @@ def get_sources_non_msvc(env_base: "Environment"):
     all_sources = __get_all_sources(env_base)
 
     fastsimd_objs = []
-    if not env['fastsimd_compile_arm']:
-        if env['sizeof_void_p'] == 4 or '-m32' in env_base['CPPFLAGS']:
+    if not env_base['fastsimd_compile_arm']:
+        if env_base['sizeof_void_p'] == 4 or '-m32' in env_base['CPPFLAGS']:
             all_sources, fastsimd_32bit_objs = __get_32bit_sources_non_msvc(env_base, all_sources)
             fastsimd_objs += fastsimd_32bit_objs
         all_sources, fastsimd_msse_objs = __get_msse_sources(env_base, all_sources)
@@ -186,7 +188,7 @@ def get_sources_non_msvc(env_base: "Environment"):
 
         fastsimd_objs += fastsimd_msse_objs
         fastsimd_objs += fastsimd_avx_objs
-    elif env['fastsimd_compile_armv7']:
+    elif env_base['fastsimd_compile_armv7']:
         all_sources, fastsimd_neon_objs = __get_armv7_sources_non_msvc(env_base, all_sources)
         fastsimd_objs += fastsimd_neon_objs
 
