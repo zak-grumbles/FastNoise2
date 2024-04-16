@@ -21,7 +21,7 @@ fastsimd_headers = fastsimd_headers + fastsimd_inl + fastsimd_include_inl
 from fastsimd_helpers import *
 fastsimd_obj = []
 
-if env['use_llvm']:
+if env['use_llvm'] or env['CC'] != 'cl':
     env.AppendUnique(CPPFLAGS=['-std=c++17','-ffast-math','-fno-stack-protector'])
     fastsimd_obj = get_sources_non_msvc(env)
 elif env['CC'] == 'cl':
